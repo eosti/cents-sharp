@@ -12,7 +12,7 @@ void setup() {
   print_msg("Beginning Setup", INFO);
 
   mic_init(buffer1, buffer2);
-  fft_init(fft_buffer, CAPTURE_BITS);
+  fft_init(fft_buffer, CAPTURE_BITS, MIC_SAMPLE_RATE);
   display_init();
   print_msg("Setup complete!", INFO);
   tuner.center_frequency = 440;
@@ -38,17 +38,14 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  double result = do_fft();
+  fix15 result = do_fft();
   if (result != 0) {
-    // fix15 freq = bin2freq(result);
-
     char msg[64];
-    // sprintf(msg, "Primary frequency is %f", fix2float15(freq));
-    sprintf(msg, "Primary frequency is %f", result);
+    sprintf(msg, "Primary frequency is %f", fix2float15(result));
     print_msg(msg, INFO);
 
     uint8_t index;
-    freq2note(float2fix15(result), &index, &(tuner.cents_deviation));
+    freq2note(result, &index, &(tuner.cents_deviation));
     tuner.current_note = (display_note_t)(index % 12);
     display_tuner(&tuner);
   }

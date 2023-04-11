@@ -19,7 +19,7 @@ void mic_init(uint16_t *front_buf, uint16_t *back_buf) {
     adc_init();
     adc_gpio_init(MIC_ADC_PIN);
     adc_select_input(MIC_ADC_PIN - 26); // sets ADC mux, 0-3 correspond to GPIO 26-29
-    adc_set_clkdiv(500 * 2); // Base clock is 48MHz, we want to sample at 96KHz
+    adc_set_clkdiv(48000000 / MIC_SAMPLE_RATE); // Base clock is 48MHz, we want to sample at 96KHz
 
     // DMA config
 
