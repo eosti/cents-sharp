@@ -3,6 +3,9 @@ arduinoFFT FFT;
 
 // Private defs
 const void __populate_freq_lut(uint16_t tune_a);
+const fix15 __average(fix15 *, uint8_t count);
+const fix15 __variance(fix15 *, uint8_t count, fix15 avg);
+const fix15 __median(fix15 *arr, uint8_t count);
 
 uint16_t *data_input = NULL;
 fix15 *data_output = NULL;
@@ -14,6 +17,12 @@ uint32_t SAMPLE_RATE = 0;
 uint16_t tune_a_value = 440;
 double FREQ2OCTAVE_CONSTANT;
 double LOG_1_12_BASE;
+
+
+fix15 rolling_buffer[ROLLING_ITEMS] = {1};
+fix15 rolling_average = 0;
+fix15 rolling_stddev = 0;
+uint8_t rolling_index = 0;
 
 double FREQ_LUT[12*NUM_OCTAVES];
 
@@ -114,6 +123,13 @@ fix15 do_fft() {
 
     // transfer complete, so we reset the input buffer
     data_input = NULL;
+
+    // Step 0: windowing wising Hann function
+    for (uint16_t i = 0; i < CAPTURE_DEPTH; i++) {
+        fix15 multiplier = (int2fix15(1) - Sinewave[abs(i - CAPTURE_DEPTH/4) & 0xFFFF]) >> 1;
+        data_output[i] = multiply_fix15(multiplier, data_output[i]);
+    }
+
     //dump_array_fix15(data_output, 64, "do_fft transfer");
     //dump_array_double(vReal, 64, "do_fft transfer");
 
@@ -161,7 +177,7 @@ fix15 do_fft() {
             // Get trig values for this element (0.5*cos/sin(sample number))
             uint32_t bt = i << fft_bits;
             fix15 sin_term = -Sinewave[bt];
-            fix15 cos_term = Sinewave[bt + CAPTURE_DEPTH/4];
+            fix15 cos_term = Sinewave[(bt + CAPTURE_DEPTH/4) & 0xFFFF];
             sin_term >>= 1;
             cos_term >>= 1;
 
@@ -197,8 +213,38 @@ fix15 do_fft() {
     }
 
     // Step 4: Weighted interpolation
+    fix15 delta = (data_output[i_max - 1] - data_output[i_max + 1]) >> 1;
+    delta = divide_fix15(delta, (data_output[i_max - 1] + data_output[i_max + 1] - 2*data_output[i_max]));
+    fix15 interpolated = multiply_fix15((int2fix15(i_max) + delta), float2fix15((float)SAMPLE_RATE/CAPTURE_DEPTH));
 
-    return bin2freq(i_max);
+    char msg[64];
+    sprintf(msg, "Original: %f Interpolated: %f", fix2float15(data_output[i_max]), fix2float15(interpolated));
+    //print_msg(msg, DEBUG);
+
+    // Step 5: rolling average w/ outlier detection
+    // if (interpolated > rolling_average + rolling_stddev << 3 || interpolated < rolling_average - rolling_stddev << 3) {
+    //     // This is an outlier, so discard it
+    //     sprintf(msg, "Skipped frequency of %f (mean=%f, var=%f)", fix2float15(interpolated), fix2float15(rolling_average), fix2float15(rolling_stddev));
+    //     print_msg(msg, INFO);
+    //     return rolling_average;
+    // }
+
+    // // Otherwise, add to buffer
+    // sprintf(msg, "Added frequency of %f (mean=%f, var=%f)", fix2float15(interpolated), fix2float15(rolling_average), fix2float15(rolling_stddev));
+    rolling_buffer[rolling_index] = interpolated;
+    // rolling_average = __average(rolling_buffer, ROLLING_ITEMS);
+    // rolling_stddev = __variance(rolling_buffer, ROLLING_ITEMS, rolling_average);
+    rolling_average = __median(rolling_buffer, ROLLING_ITEMS);
+    //sprintf(msg, "Median value is %f", fix2float15(rolling_average));
+    //print_msg(msg, INFO);
+
+    if (rolling_index == ROLLING_ITEMS - 1) {
+        rolling_index = 0;
+    } else {
+        rolling_index++;
+    }
+
+    return rolling_average;
 }
 
 /**
@@ -215,7 +261,7 @@ const void __populate_freq_lut(uint16_t tune_a) {
 }
 
 fix15 bin2freq(uint16_t bin) {
-    return float2fix15(bin * (float)SAMPLE_RATE/ CAPTURE_DEPTH);
+    return float2fix15(bin * (float)SAMPLE_RATE / CAPTURE_DEPTH);
 }
 
 /**
@@ -250,4 +296,56 @@ void freq2note(fix15 freq, uint8_t *note_index, int8_t *cents_deviation) {
         }
     }
     return;
+}
+
+const fix15 __average(fix15 *buf, uint8_t count) {
+    fix15 sum = 0;
+    uint8_t omit = 0;
+    for (int i = 0; i < count; i++) {
+        if (buf[i] == 0) {
+            omit++;
+            continue;
+        } else {
+            sum += buf[i];
+        }
+    }
+    return multiply_fix15(sum, float2fix15((float)1/(count - omit)));
+}
+
+const fix15 __variance(fix15 *buf, uint8_t count, fix15 avg) {
+    fix15 stddev = 0; 
+    uint8_t omit = 0;
+    for (int i = 0; i < count; i++) {
+        if (buf[i] == 0) {
+            omit++;
+            continue;
+        } else {
+            stddev += multiply_fix15((buf[i] - avg), (buf[i] - avg));
+        }
+    }
+    return multiply_fix15(stddev, float2fix15((float)1/(count-omit)));
+}
+
+const fix15 __median(fix15 *arr, uint8_t count) {
+    fix15 tmp[ROLLING_ITEMS];
+    memcpy(tmp, arr, ROLLING_ITEMS*sizeof(fix15));
+
+    // Sort
+    for (uint8_t i = 1; i <= count - 1; i++) {
+        for (uint8_t j = 1; j <= count - i; j++) {
+            if (arr[j] <= arr[j+1]){
+                fix15 t = tmp[j];
+                tmp[j] = tmp[j+1];
+                tmp[j+1] = t;
+            } else {
+                continue;
+            }
+        }
+    }
+
+    if (count % 2 == 0) {
+        return (tmp[count/2] + tmp[count/2 + 1]) >> 1;
+    } else {
+        return tmp[count/2 + 1];
+    }
 }

@@ -42,7 +42,7 @@ void loop() {
   if (result != 0) {
     char msg[64];
     sprintf(msg, "Primary frequency is %f", fix2float15(result));
-    print_msg(msg, INFO);
+    // print_msg(msg, INFO);
 
     uint8_t index;
     freq2note(result, &index, &(tuner.cents_deviation));

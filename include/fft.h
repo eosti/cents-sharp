@@ -9,6 +9,7 @@
 
 /* CONSTANTS */
 #define NUM_OCTAVES 8
+#define ROLLING_ITEMS 8
 
 /* EXPORTED FUNTIONS */
 void fft_init(fix15 *, uint16_t, uint32_t);
