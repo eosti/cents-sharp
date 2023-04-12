@@ -16,6 +16,6 @@ enum tuner_mode_t { MODE_TUNER, MODE_TUNER_MEME, MODE_METRONOME };
 #define PIZEO_PIN           15
 #define METRONOME_LOW_TONE  880
 #define METRONOME_HIGH_TONE 1760
-#define METRONOME_TONE_TIME 250 // in ms
+#define METRONOME_TONE_TIME 100 // in ms
 
 /* EXPORTED FUNCTIONS */

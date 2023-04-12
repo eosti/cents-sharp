@@ -134,26 +134,6 @@ void display_tuner(struct display_tuner_t *tuner) {
     display.setDrawColor(1);
     display.drawBox(display.getWidth() / 2 - BAR_CENTER_WIDTH / 2, BAR_CENTER_YPOS - BAR_CENTER_HEIGHT/ 2, BAR_CENTER_WIDTH, BAR_CENTER_HEIGHT);
 
-    // Draw the tuning line
-    if(tuner->cents_deviation > -INTUNE_TOLERANCE && tuner->cents_deviation < INTUNE_TOLERANCE) {
-        // perfectly in tune, nice
-        display.setDrawColor(2);
-        display.drawBox(2, 2, display.getWidth() - 2, BAR_CENTER_HEIGHT + BAR_CENTER_YPOS - 2);
-        display.setDrawColor(1);
-    } else if (tuner->cents_deviation > 0) {
-        // Sharp
-        display.drawBox(display.getWidth() / 2 + BAR_CENTER_WIDTH / 2, BAR_CENTER_YPOS - BAR_TUNING_HEIGHT / 2, 100, BAR_TUNING_HEIGHT);
-        display.setDrawColor(0);
-        display.drawBox(display.getWidth() / 2 + tuner->cents_deviation, 0, 100, BAR_CENTER_YPOS + BAR_TUNING_HEIGHT / 2);
-        display.setDrawColor(1);
-    } else {
-        // Flat
-        display.drawBox(0, BAR_CENTER_YPOS - BAR_TUNING_HEIGHT / 2, display.getWidth() / 2 - BAR_CENTER_WIDTH / 2, BAR_TUNING_HEIGHT);
-        display.setDrawColor(0);
-        display.drawBox(0, 0, display.getWidth() / 2 + tuner->cents_deviation, BAR_CENTER_YPOS + BAR_TUNING_HEIGHT / 2);
-        display.setDrawColor(1);
-    }
-
     // Draw left endcap
     display.drawVLine(display.getWidth() / 2 - 50 - BAR_ENDCAP_HOFFSET, BAR_CENTER_YPOS - BAR_ENDCAP_HEIGHT / 2, BAR_ENDCAP_HEIGHT);
     display.drawHLine(display.getWidth() / 2 - 50 - BAR_ENDCAP_HOFFSET, BAR_CENTER_YPOS + BAR_ENDCAP_HEIGHT / 2, BAR_ENDCAP_TIPLEN);
@@ -173,6 +153,21 @@ void display_tuner(struct display_tuner_t *tuner) {
     // Draw double target marker
     display.drawVLine(display.getWidth() / 2 + 12, BAR_CENTER_YPOS - BAR_MARKER_LEN, BAR_MARKER_LEN * 2);
     display.drawVLine(display.getWidth() / 2 - 12, BAR_CENTER_YPOS - BAR_MARKER_LEN, BAR_MARKER_LEN * 2);
+
+    // Draw the tuning line
+    if(tuner->cents_deviation > -INTUNE_TOLERANCE && tuner->cents_deviation < INTUNE_TOLERANCE) {
+        // perfectly in tune, nice
+        display.setDrawColor(2);
+        display.drawBox(2, 2, display.getWidth() - 2, BAR_CENTER_HEIGHT + BAR_CENTER_YPOS - 2);
+        display.setDrawColor(1);
+    } else if (tuner->cents_deviation > 0) {
+        // Sharp
+        display.drawBox(display.getWidth() / 2 + BAR_CENTER_WIDTH / 2, BAR_CENTER_YPOS - BAR_TUNING_HEIGHT / 2, tuner->cents_deviation, BAR_TUNING_HEIGHT);
+    } else {
+        // Flat
+        display.drawBox(display.getWidth() / 2 + tuner->cents_deviation, BAR_CENTER_YPOS - BAR_TUNING_HEIGHT / 2, abs(tuner->cents_deviation), BAR_TUNING_HEIGHT);
+    }
+
 #endif
 
     // Draw the note
