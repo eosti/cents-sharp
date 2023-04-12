@@ -5,7 +5,6 @@ const void __note2char(display_note_t note, char *output);
 
 U8G2_SSD1306_128X64_NONAME_F_HW_I2C display(U8G2_R0);
 
-display_mode_t cur_mode = DISPLAY_INIT;
 uint8_t DEVIATION_LUT[101];
 
 void display_init() {
@@ -41,19 +40,47 @@ void display_init() {
 }
 
 void display_tuner(struct display_tuner_t *tuner) {
-    cur_mode = DISPLAY_TUNER;
-
     display.clearBuffer();
     
-    // Draw center frequency
-    char center_frequency[8];
-    sprintf(center_frequency, "%03d", tuner->center_frequency);
-    display.setFont(u8g2_font_fub11_tr);
-    display.drawStr(0, 64, center_frequency);
+    if (!(tuner->display_meme)) {
+        // Draw center frequency
+        char center_frequency[8];
+        sprintf(center_frequency, "%03d", tuner->center_frequency);
+        display.setFont(u8g2_font_fub11_tr);
+        display.drawStr(0, 64, center_frequency);
+    } else {
+        char cents_sharp[8];
+        if (tuner->currency == CURRENCY_USD) {
+            sprintf(cents_sharp, "$%0.02f", tuner->cents_deviation * 0.01);
+        } else if (tuner->currency == CURRENCY_CAD) {
+            sprintf(cents_sharp, "C$%0.02f", USD2CAD(tuner->cents_deviation));
+        } else if (tuner->currency == CURRENCY_GBP) {
+            sprintf(cents_sharp, "\xa3""%0.02f", USD2GBP(tuner->cents_deviation));
+        } else if (tuner->currency == CURRENCY_BTC) {
+            sprintf(cents_sharp, "B%5d", USD2BTC(tuner->cents_deviation));
+        } else if (tuner->currency == CURRENCY_YEN) {
+            sprintf(cents_sharp, "\xa5""%3.f", USD2YEN(tuner->cents_deviation));
+        } else {
+            sprintf(cents_sharp, "\xa4");
+        }
+        display.setFont(u8g2_font_fub11_tf);
+        display.drawStr(0, 64, cents_sharp);
+    }
 
     // Draw tuner glyph
-    display.setFont(u8g2_font_streamline_music_audio_t);
-    display.drawStr(106, 64, "\x31");
+    if (tuner->display_meme) {
+        display.setFont(u8g2_font_streamline_money_payments_t);
+        display.drawStr(106, 64, "\x38");
+    } else {
+        display.setFont(u8g2_font_streamline_music_audio_t);
+        display.drawStr(106, 64, "\x31");
+    }
+
+    // if (tuner->low_noise) {
+    //     display.setFont(u8g2_font_streamline_users_t);
+    //     display.drawStr(54, 10, "\x3a");
+    //     return;
+    // }
 
     // Draw the tuner visualizer
 #ifdef CIRCULAR_TUNER
@@ -111,7 +138,7 @@ void display_tuner(struct display_tuner_t *tuner) {
     if(tuner->cents_deviation > -INTUNE_TOLERANCE && tuner->cents_deviation < INTUNE_TOLERANCE) {
         // perfectly in tune, nice
         display.setDrawColor(2);
-        display.drawBox(0, 0, display.getWidth(), display.getHeight());
+        display.drawBox(2, 2, display.getWidth() - 2, BAR_CENTER_HEIGHT + BAR_CENTER_YPOS - 2);
         display.setDrawColor(1);
     } else if (tuner->cents_deviation > 0) {
         // Sharp
@@ -156,6 +183,9 @@ void display_tuner(struct display_tuner_t *tuner) {
     uint8_t w = display.getStrWidth(note);
     uint8_t h = display.getAscent() - display.getDescent();
     uint8_t x = 64 - w/2;
+    if (tuner->display_meme) {
+        x = 64 - w/2 + 16;
+    }
     uint8_t y = 64 - 4;
 
     if (strlen(note) == 0) {
@@ -172,6 +202,67 @@ void display_tuner(struct display_tuner_t *tuner) {
     } else {
         // Draw standard box, fill with note
         display.drawStr(x, y, note);
+    }
+    display.sendBuffer();
+}
+
+void display_metronome(struct display_tuner_t *tuner) {
+    display.clearBuffer();
+
+    // Draw current BPM
+    char cur_bpm[8];
+    sprintf(cur_bpm, "%d", tuner->metronome_bpm);
+    display.setFont(u8g2_font_inr38_mf);
+    uint8_t w = display.getStrWidth(cur_bpm);
+    uint8_t h = display.getAscent() - display.getDescent();
+    uint8_t x = 64 - w/2;
+    uint8_t y = h - 6;
+    display.drawStr(x, y, cur_bpm);
+
+    // Draw metronome glyph
+    display.setFont(u8g2_font_streamline_interface_essential_alert_t);
+    display.drawStr(106, 64, "\x34");
+
+    // Draw beats counter
+    if (tuner->beat <= BEAT_9 && tuner->beat >= BEAT_0) {
+        display.setFont(u8g2_font_unifont_t_72_73);
+        if (tuner->beat == BEAT_0) {
+            display.drawGlyph(1, 63, 0x24ea);
+        } else {
+            display.drawGlyph(1, 63, tuner->beat + 0x2460 - 2);
+        }
+        display.setFont(u8g2_font_unifont_t_76);
+        display.drawGlyph(18, 63, 0x2669);
+    } else if (tuner->beat == BEAT_NONE) {
+        display.setFont(u8g2_font_unifont_h_symbols);
+        display.drawGlyph(1, 63, 0x2715);
+    } else if (tuner->beat == BEAT_EIGHTH) {
+        display.setFont(u8g2_font_unifont_t_76);
+        display.drawGlyph(1, 63, 0x266b);
+    } else if (tuner->beat == BEAT_TRIPLET) {
+        display.setFont(u8g2_font_unifont_t_76);
+        display.drawGlyph(1, 63, 0x266a);
+        display.drawGlyph(9, 63, 0x266a);
+        display.drawGlyph(17, 63, 0x266a);
+    } else if (tuner->beat == BEAT_SPLIT_TRIPLET) {
+        display.setFont(u8g2_font_unifont_t_76);
+        display.drawGlyph(1, 63, 0x266a);
+        display.drawGlyph(9, 63, 0x2652);
+        display.drawGlyph(17, 63, 0x266a);
+    } else if (tuner->beat == BEAT_SIXTEEN) {
+        display.setFont(u8g2_font_unifont_t_76);
+        display.drawGlyph(1, 63, 0x266c);
+        display.drawGlyph(9, 63, 0x266c);
+    } else if (tuner->beat == BEAT_SPLIT_SIXTEEN) {
+        display.setFont(u8g2_font_unifont_t_76);
+        display.drawGlyph(1, 63, 0x266a);
+        display.drawGlyph(9, 63, 0x2652);
+        display.drawGlyph(17, 63, 0x2652);
+        display.drawGlyph(25, 63, 0x266a);
+    } else {
+        display.setFont(u8g2_font_unifont_h_symbols);
+        display.setCursor(1, 63);
+        display.print("\x3F\x3F");
     }
     display.sendBuffer();
 }

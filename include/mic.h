@@ -11,7 +11,7 @@
 #define MIC_ADC_PIN 26
 #define CAPTURE_BITS 12
 #define CAPTURE_DEPTH 1 << CAPTURE_BITS
-#define MIC_SAMPLE_RATE 24000
+#define MIC_SAMPLE_RATE 96000 * 2
 
 /* EXPORTED FUNCTIONS */
 void mic_init(uint16_t *, uint16_t *);

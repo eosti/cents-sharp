@@ -1,5 +1,4 @@
 #include "fft.h"
-arduinoFFT FFT;
 
 // Private defs
 const void __populate_freq_lut(uint16_t tune_a);
@@ -19,10 +18,12 @@ double FREQ2OCTAVE_CONSTANT;
 double LOG_1_12_BASE;
 
 
-fix15 rolling_buffer[ROLLING_ITEMS] = {1};
+fix15 rolling_buffer[ROLLING_ITEMS] = {0};
 fix15 rolling_average = 0;
-fix15 rolling_stddev = 0;
+fix15 rolling_deviance = 0;
 uint8_t rolling_index = 0;
+uint8_t rolling_outlier_count = 0;
+fix15 rolling_outlier[ROLLING_ITEMS] = {0};
 
 double FREQ_LUT[12*NUM_OCTAVES];
 
@@ -87,6 +88,7 @@ fix15 do_fft() {
         return 0;
     }
 
+    char msg[64];
     //dump_array_uint16(data_input, 64, "do_fft input:");
 
     // Expected input is an CAPTURE_DEPTH length array of 12-bit readings
@@ -116,9 +118,8 @@ fix15 do_fft() {
     }
 
     if (data_error) {
-        char buf[64];
-        sprintf(buf, "%d ADC errors detected out of %d samples", data_error, CAPTURE_DEPTH);
-        print_msg(buf, WARNING);
+        sprintf(msg, "%d ADC errors detected out of %d samples", data_error, CAPTURE_DEPTH);
+        print_msg(msg, WARNING);
     }
 
     // transfer complete, so we reset the input buffer
@@ -212,36 +213,58 @@ fix15 do_fft() {
         }
     }
 
+    sprintf(msg, "DC: %f, peak: %f", fix2float15(data_output[0]), fix2float15(max_val));
+    print_msg(msg, DEBUG);
+
+    // Step 3.5: Low-Noise Cutoff
+    if (max_val < LOW_NOISE_THRESH) {
+        return int2fix15(-1);
+    }
+
+
     // Step 4: Weighted interpolation
     fix15 delta = (data_output[i_max - 1] - data_output[i_max + 1]) >> 1;
     delta = divide_fix15(delta, (data_output[i_max - 1] + data_output[i_max + 1] - 2*data_output[i_max]));
     fix15 interpolated = multiply_fix15((int2fix15(i_max) + delta), float2fix15((float)SAMPLE_RATE/CAPTURE_DEPTH));
 
-    char msg[64];
-    sprintf(msg, "Original: %f Interpolated: %f", fix2float15(data_output[i_max]), fix2float15(interpolated));
+    //sprintf(msg, "Original: %f Interpolated: %f", fix2float15(data_output[i_max]), fix2float15(interpolated));
     //print_msg(msg, DEBUG);
 
     // Step 5: rolling average w/ outlier detection
-    // if (interpolated > rolling_average + rolling_stddev << 3 || interpolated < rolling_average - rolling_stddev << 3) {
-    //     // This is an outlier, so discard it
-    //     sprintf(msg, "Skipped frequency of %f (mean=%f, var=%f)", fix2float15(interpolated), fix2float15(rolling_average), fix2float15(rolling_stddev));
-    //     print_msg(msg, INFO);
-    //     return rolling_average;
-    // }
+    if (interpolated > rolling_average + rolling_deviance || interpolated < rolling_average - rolling_deviance) {
+        if (rolling_outlier_count >= ROLLING_OUTLIER_THRESH) {
+            // Swap in array
+            print_msg("rolling average: swap buffers", INFO);
+            memcpy(rolling_buffer, rolling_outlier, ROLLING_ITEMS * sizeof(fix15));
+            rolling_index = ROLLING_OUTLIER_THRESH;
+            rolling_outlier_count = 0;
+        } else {
+            // This is an outlier, so shelve it
+            rolling_outlier[rolling_outlier_count] = interpolated;
+            rolling_outlier_count++;
+            sprintf(msg, "Skipped frequency of %f (mean=%f, var=%f)", fix2float15(interpolated), fix2float15(rolling_average), fix2float15(rolling_deviance));
+            // print_msg(msg, DEBUG);
+            return rolling_average;
+        }
+    }
 
-    // // Otherwise, add to buffer
-    // sprintf(msg, "Added frequency of %f (mean=%f, var=%f)", fix2float15(interpolated), fix2float15(rolling_average), fix2float15(rolling_stddev));
+    // Otherwise, add to buffer
+    rolling_outlier_count = 0;
+    sprintf(msg, "Added frequency of %f (mean=%f, var=%f)", fix2float15(interpolated), fix2float15(rolling_average), fix2float15(rolling_deviance));
     rolling_buffer[rolling_index] = interpolated;
-    // rolling_average = __average(rolling_buffer, ROLLING_ITEMS);
-    // rolling_stddev = __variance(rolling_buffer, ROLLING_ITEMS, rolling_average);
-    rolling_average = __median(rolling_buffer, ROLLING_ITEMS);
-    //sprintf(msg, "Median value is %f", fix2float15(rolling_average));
-    //print_msg(msg, INFO);
+    rolling_average = __average(rolling_buffer, ROLLING_ITEMS);
+    rolling_deviance = multiply_fix15(float2fix15(ROLLING_DEVIANCE_MULT), rolling_average);
+    // rolling_variance = __variance(rolling_buffer, ROLLING_ITEMS, rolling_average);
 
-    if (rolling_index == ROLLING_ITEMS - 1) {
-        rolling_index = 0;
-    } else {
+    // rolling_buffer[rolling_index] = interpolated;
+    // rolling_average = __median(rolling_buffer, ROLLING_ITEMS);
+    //sprintf(msg, "Median value is %f", fix2float15(rolling_average));
+    // print_msg(msg, DEBUG);
+
+    if (rolling_index < ROLLING_ITEMS) {
         rolling_index++;
+    } else {
+        rolling_index = 0;
     }
 
     return rolling_average;
