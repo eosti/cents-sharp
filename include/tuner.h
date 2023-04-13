@@ -9,7 +9,7 @@
 #include <Arduino.h>
 
 /* Types */
-enum tuner_mode_t { MODE_TUNER, MODE_TUNER_MEME, MODE_METRONOME };
+enum tuner_mode_t { MODE_TUNER, MODE_TUNER_MEME, MODE_SOUNDBACK, MODE_METRONOME };
 
 /* CONSTANTS */
 #define PIZEO_PIN           15
@@ -21,5 +21,6 @@ enum tuner_mode_t { MODE_TUNER, MODE_TUNER_MEME, MODE_METRONOME };
 void tuner_init();
 void do_tuner(control_output_t *control_output);
 void do_metronome(control_output_t *control_output);
+void do_soundback(control_output_t *control_output);
 void tuner_new_mode();
 void tuner_meme(bool meme);

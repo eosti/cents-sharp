@@ -18,3 +18,4 @@ void fft_init(fix15 *fft_output, uint16_t num_bits, uint32_t samplerate);
 fix15 do_fft();
 void freq2note(fix15 freq, uint8_t *note_index, int8_t *cents_deviation);
 void change_fft_center(uint16_t new_center);
+uint32_t index2freq(uint8_t index);

@@ -33,6 +33,10 @@ void loop() {
                 print_msg("mode switch: tuner meme", INFO);
                 break;
             case MODE_TUNER_MEME:
+                tuner_mode = MODE_SOUNDBACK;
+                print_msg("mode switch: soundback", INFO);
+                break;
+            case MODE_SOUNDBACK:
                 tuner_mode = MODE_METRONOME;
                 print_msg("mode switch: metronome", INFO);
                 break;
@@ -52,7 +56,11 @@ void loop() {
     } else if (tuner_mode == MODE_TUNER_MEME) {
         tuner_meme(true);
         do_tuner(&control_output);
+    } else if (tuner_mode == MODE_SOUNDBACK) {
+        do_soundback(&control_output);
     } else if (tuner_mode == MODE_METRONOME) {
         do_metronome(&control_output);
+    } else {
+        fatal_error("Invalid mode");
     }
 }

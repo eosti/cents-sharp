@@ -7,6 +7,10 @@
 
 /* TYPES */
 enum display_note_t {
+    NOTE_A_FLAT,
+    NOTE_A,
+    NOTE_B_FLAT,
+    NOTE_B,
     NOTE_C,
     NOTE_C_SHARP,
     NOTE_D,
@@ -15,10 +19,6 @@ enum display_note_t {
     NOTE_F,
     NOTE_F_SHARP,
     NOTE_G,
-    NOTE_A_FLAT,
-    NOTE_A,
-    NOTE_B_FLAT,
-    NOTE_B,
     NOTE_NONE
 };
 
@@ -53,6 +53,9 @@ typedef struct display_tuner_t {
     uint8_t mode_sel;
     bool low_noise;
     currency_t currency;
+    bool soundback_en;
+    display_note_t soundback_note;
+    uint8_t soundback_octave;
 } tuner_t;
 
 /* CONSTANTS */
@@ -101,3 +104,4 @@ typedef struct display_tuner_t {
 void display_init();
 void display_tuner(struct display_tuner_t *tuner);
 void display_metronome(struct display_tuner_t *tuner);
+void display_soundback(struct display_tuner_t *tuner);

@@ -320,6 +320,10 @@ void freq2note(fix15 freq, uint8_t *note_index, int8_t *cents_deviation) {
     return;
 }
 
+uint32_t index2freq(uint8_t index) {
+    return (uint32_t)FREQ_LUT[index];
+}
+
 const fix15 __average(fix15 *buf, uint8_t count) {
     fix15 sum    = 0;
     uint8_t omit = 0;

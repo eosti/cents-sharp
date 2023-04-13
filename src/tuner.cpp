@@ -3,6 +3,8 @@
 // Private functions
 bool __metronome_irq(struct repeating_timer *t);
 int64_t __metronome_off(alarm_id_t id, void *user_data);
+static inline display_note_t __noteindex2displaynote(uint8_t index);
+static uint32_t __note2freq(display_note_t note, uint8_t octave);
 
 // Global variables
 struct display_tuner_t *tuner;
@@ -19,6 +21,9 @@ void tuner_init() {
     tuner->beat             = BEAT_NONE;
     tuner->metronome_bpm    = 60;
     tuner->currency         = CURRENCY_USD;
+    tuner->soundback_en = false;
+    tuner->soundback_note = NOTE_A;
+    tuner->soundback_octave = 4;
     change_fft_center(tuner->center_frequency);
     pinMode(PIZEO_PIN, OUTPUT);
 }
@@ -62,7 +67,7 @@ void do_tuner(control_output_t *control_output) {
 
         uint8_t index;
         freq2note(result, &index, &(tuner->cents_deviation));
-        tuner->current_note = (display_note_t)(index % 12);
+        tuner->current_note = __noteindex2displaynote(index);
         tuner->low_noise    = false;
         display_tuner(tuner);
     }
@@ -82,16 +87,20 @@ void do_metronome(control_output_t *control_output) {
             if (tuner->metronome_bpm > 300) tuner->metronome_bpm = 300;
             if (tuner->metronome_bpm < 20) tuner->metronome_bpm = 20;
         } else if (tuner->mode_sel == 1) {
-            if (tuner->beat == BEAT_NONE && control_output->encoder_movement < 0) {
-                tuner->beat = BEAT_SPLIT_SIXTEEN;
+            if (tuner->soundback_en) {
+                // Cannot use soundback and metronome at the same time
             } else {
-                tuner->beat = (display_beat_t)(tuner->beat + control_output->encoder_movement);
-                if (tuner->beat > BEAT_SPLIT_SIXTEEN) tuner->beat = BEAT_NONE;
+                if (tuner->beat == BEAT_NONE && control_output->encoder_movement < 0) {
+                    tuner->beat = BEAT_SPLIT_SIXTEEN;
+                } else {
+                    tuner->beat = (display_beat_t)(tuner->beat + control_output->encoder_movement);
+                    if (tuner->beat > BEAT_SPLIT_SIXTEEN) tuner->beat = BEAT_NONE;
+                }
             }
         }
         char msg[64];
         sprintf(msg, "metronome: mode %d at %dbpm", tuner->beat, tuner->metronome_bpm);
-        print_msg(msg, INFO);
+        print_msg(msg, DEBUG);
 
         control_output->encoder_movement = 0;
 
@@ -120,6 +129,57 @@ void do_metronome(control_output_t *control_output) {
     }
 
     display_metronome(tuner);
+}
+
+void do_soundback(control_output_t *control_output) {
+    // Check if control state changed
+    if (control_output->encoder_movement) {
+        if (tuner->soundback_note == NOTE_A_FLAT && control_output->encoder_movement < 0) {
+            if (tuner->soundback_octave == 1) {
+                // Can't go lower than octave 1
+            } else {
+                tuner->soundback_note = NOTE_G;
+                tuner->soundback_octave--;
+            }
+            control_output->encoder_movement++;
+        } else if (tuner->soundback_note == NOTE_G && control_output->encoder_movement > 0) {
+            if (tuner->soundback_octave == 7) {
+                // Can't go higher than octave 7
+            } else {
+                tuner->soundback_note = NOTE_A_FLAT;
+                tuner->soundback_octave++;
+            }
+            control_output->encoder_movement--;
+        } else {
+            tuner->soundback_note = (display_note_t)(tuner->soundback_note + control_output->encoder_movement);
+            // ack, constrain if we go too fast
+            if (tuner->soundback_note >= NOTE_NONE) tuner->soundback_note = NOTE_G;
+            control_output->encoder_movement = 0;
+        }
+        // Play new tone
+        if (tuner->soundback_en) {
+            tone(PIZEO_PIN, __note2freq(tuner->soundback_note, tuner->soundback_octave));
+        }
+    }
+
+    if (control_output->encoder_but_pressed) {
+        if (tuner->beat != BEAT_NONE) {
+            // Cannot use soundback and metronome at same time
+        } else {
+            tuner->soundback_en = tuner->soundback_en ? 0 : 1;
+        }
+
+        // 
+        if (tuner->soundback_en) {
+            tone(PIZEO_PIN, __note2freq(tuner->soundback_note, tuner->soundback_octave));
+        } else if (tuner->beat == BEAT_NONE) {
+            noTone(PIZEO_PIN);
+        }
+
+        control_output->encoder_but_pressed = 0;
+    }
+
+    display_soundback(tuner);
 }
 
 /**
@@ -208,4 +268,13 @@ void tuner_new_mode() {
  */
 void tuner_meme(bool meme) {
     tuner->display_meme = meme;
+}
+
+static inline display_note_t __noteindex2displaynote(uint8_t index) {
+    // The index is aligned to C0, whereas the display index is aligned to A flat
+    return (display_note_t)((index + 4) % 12);
+}
+
+static uint32_t __note2freq(display_note_t note, uint8_t octave) {
+    return index2freq(note - 4 + octave * 12);
 }

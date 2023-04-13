@@ -259,6 +259,15 @@ void display_metronome(struct display_tuner_t *tuner) {
     display.setFont(u8g2_font_streamline_interface_essential_alert_t);
     display.drawStr(106, 64, "\x34");
 
+    // Draw disable glyph
+    if (tuner->soundback_en) {
+        // Transparent
+        display.setFont(u8g2_font_unifont_h_symbols);
+        display.setFontMode(1);
+        display.drawGlyph(90, 61, 0x2717);
+        display.setFontMode(0);
+    }
+
     // Draw beats counter
     if (tuner->beat <= BEAT_9 && tuner->beat >= BEAT_0) {
         display.setFont(u8g2_font_unifont_t_72_73);
@@ -300,6 +309,68 @@ void display_metronome(struct display_tuner_t *tuner) {
         display.setCursor(1, 63);
         display.print("\x3F\x3F");
     }
+    display.sendBuffer();
+}
+
+void display_soundback(struct display_tuner_t *tuner) {
+    display.clearBuffer();
+
+    // Draw target note
+    char note[3] = "";
+    __note2char(tuner->soundback_note, note);
+
+    display.setFont(u8g2_font_inr38_mf);
+    uint8_t w = display.getStrWidth(note);
+    uint8_t h = display.getAscent() - display.getDescent();
+    uint8_t x = 64 - w / 2;
+    uint8_t y = h - 6;
+
+    if (strlen(note) == 2) {
+        // TODO: make a nice flat/sharp glyph
+        if (note[1] == '#') {
+            // draw sharp
+            display.drawStr(x, y, note);
+        } else {
+            // draw flat
+            display.drawStr(x, y, note);
+        }
+    } else {
+        // No sharp/flat
+        display.drawStr(x, y, note);
+    }
+
+    // Draw target octave
+    sprintf(note, "%d", tuner->soundback_octave);
+    display.setFont(u8g2_font_inr24_mf);
+
+    w = display.getStrWidth(note);
+    h = display.getAscent() - display.getDescent();
+    x = display.getWidth() - w - 4;
+    y = h - 4;
+
+    display.drawStr(x, y, note);
+
+    // Draw soundback glyph
+    display.setFont(u8g2_font_streamline_interface_essential_audio_t);
+    display.drawStr(106, 64, "\x33");
+
+    // Draw play/pause
+    display.setFont(u8g2_font_unifont_t_symbols);
+    if (tuner->soundback_en) {
+        display.drawGlyphX2(1, 63, 0x23f5);
+    } else {
+        display.drawGlyphX2(1, 63, 0x23fa);
+    }
+
+    // Draw disable glyph
+    if (tuner->beat != BEAT_NONE) {
+        // Transparent
+        display.setFont(u8g2_font_unifont_h_symbols);
+        display.setFontMode(1);
+        display.drawGlyph(90, 60, 0x2717);
+        display.setFontMode(0);
+    }
+
     display.sendBuffer();
 }
 
