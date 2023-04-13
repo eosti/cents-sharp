@@ -60,7 +60,7 @@ void display_tuner(struct display_tuner_t *tuner) {
         char center_frequency[8];
         sprintf(center_frequency, "%03d", tuner->center_frequency);
         display.setFont(u8g2_font_fub11_tr);
-        display.drawStr(0, 64, center_frequency);
+        display.drawStr(0, 63, center_frequency);
     } else {
         // Draw currency conversion
         char cents_sharp[8];
@@ -78,7 +78,7 @@ void display_tuner(struct display_tuner_t *tuner) {
             sprintf(cents_sharp, "\xa4");
         }
         display.setFont(u8g2_font_fub11_tf);
-        display.drawStr(0, 64, cents_sharp);
+        display.drawStr(0, 63, cents_sharp);
     }
 
     // Draw tuner glyph
