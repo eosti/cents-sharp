@@ -1,25 +1,40 @@
 ---
+# General
 Language: Cpp
 BasedOnStyle: LLVM
 UseTab: Never
 IndentWidth: 4
 ColumnLimit: 120
+
+# Function arguments/parameters
 BinPackArguments: false
 BinPackParameters: false
-AlignAfterOpenBracket: Align
-IndentCaseLabels: true
-IndentCaseBlocks: true
-SpaceBeforeCaseColon: false
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowAllArgumentsOnNextLine: false
+
+# When to break
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
+BreakBeforeBinaryOperators: true
+BreakBeforeBraces: Attach
+
+# Shorties
 AllowShortBlocksOnASingleLine: Always
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: InlineOnly
+
+# Include statements
+IncludeBlocks: Regroup
+
+# Alignment
 AlignConsecutiveMacros: AcrossEmptyLines
 AlignConsecutiveAssignments: AcrossEmptyLines
 AlignOperands: true
-BreakBeforeBinaryOperators: true
-BreakBeforeBraces: Attach
+AlignAfterOpenBracket: Align
+
+# Switch statements
+IndentCaseLabels: true
+IndentCaseBlocks: true
+SpaceBeforeCaseColon: false
+

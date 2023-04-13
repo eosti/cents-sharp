@@ -28,33 +28,15 @@ void setup() {
     control_init(&control_output);
     print_msg("Setup complete!", INFO);
     tuner.center_frequency = 440;
-    tuner.beat             = BEAT_NONE;
-    tuner.metronome_bpm    = 60;
+    change_fft_center(tuner.center_frequency);
+    tuner.beat          = BEAT_NONE;
+    tuner.metronome_bpm = 60;
     pinMode(PIZEO_PIN, OUTPUT);
-
-    // for(fix15 i = int2fix15(1); i < int2fix15(10000); i += int2fix15(1)) {
-    //   char msg[64];
-    //   uint8_t index;
-    //   freq2note(i, &index, &(tuner.cents_deviation));
-    //   tuner.current_note = (display_note_t)(index % 12);
-    //   sprintf(msg, "Main current note: %d", index);
-    //   print_msg(msg, DEBUG);
-    //   display_tuner(&tuner);
-    //   delay(10);
-    // }
-
-    // tuner.current_note = NOTE_A_FLAT;
-    // for(int i = -50; i <= 50; i++) {
-    //   tuner.cents_deviation = i;
-    //   display_tuner(&tuner);
-    //   delay(300);
-    // }
 }
 
 void loop() {
     /* CHECK IF THE MODE HAS CHANGED */
     if (control_output.mode_but_pressed) {
-        print_msg("Switching mode", DEBUG);
         tuner.mode_sel = 0;
         control_output.mode_but_pressed--;
         switch (tuner_mode) {
@@ -93,6 +75,7 @@ void __do_tuner() {
         if (!tuner.display_meme) {
             // Change center_frequency
             tuner.center_frequency += control_output.encoder_movement;
+            change_fft_center(tuner.center_frequency);
         } else {
             if (tuner.currency == CURRENCY_USD && control_output.encoder_movement < 0) {
                 tuner.currency = CURRENCY_BTC;
@@ -116,12 +99,12 @@ void __do_tuner() {
         if (result == int2fix15(-1)) {
             // Low noise signal.
             tuner.low_noise = true;
-        } 
+        }
 
         uint8_t index;
         freq2note(result, &index, &(tuner.cents_deviation));
         tuner.current_note = (display_note_t)(index % 12);
-        tuner.low_noise = false;
+        tuner.low_noise    = false;
         display_tuner(&tuner);
     }
 }

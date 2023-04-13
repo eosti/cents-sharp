@@ -1,8 +1,8 @@
 #pragma once
-#include <Arduino.h>
+#include "error.h"
 #include "pico/stdlib.h"
 
-#include "error.h"
+#include <Arduino.h>
 
 /* TYPEDEF */
 typedef struct control_state_t {
@@ -19,13 +19,14 @@ typedef struct control_output_t {
 } control_output_t;
 
 /* DEFINES */
+// Pin definitions
 #define ENCODER_CLK 4
 #define ENCODER_DAT 3
 #define ENCODER_BUT 2
-#define MODE_BUT 5
+#define MODE_BUT    5
 
 // In ms, affects debouncing
-#define CONTROL_POLL_INTERVAL 5
+#define CONTROL_POLL_INTERVAL 3
 
 /* EXPORTED FUNCTIONS */
 void control_init(control_output_t *out);

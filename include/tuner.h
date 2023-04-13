@@ -1,12 +1,12 @@
 #pragma once
-#include <Arduino.h>
-
 #include "control.h"
 #include "display.h"
 #include "error.h"
 #include "fft.h"
 #include "fix.h"
 #include "mic.h"
+
+#include <Arduino.h>
 
 /* Types */
 
@@ -17,5 +17,3 @@ enum tuner_mode_t { MODE_TUNER, MODE_TUNER_MEME, MODE_METRONOME };
 #define METRONOME_LOW_TONE  880
 #define METRONOME_HIGH_TONE 1760
 #define METRONOME_TONE_TIME 100 // in ms
-
-/* EXPORTED FUNCTIONS */

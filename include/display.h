@@ -1,18 +1,11 @@
 #pragma once
+#include "error.h"
+
 #include <Arduino.h>
 #include <U8g2lib.h>
 #include <Wire.h>
 
-#include "error.h"
-
-/* Types */
-// enum display_mode_t {
-//     DISPLAY_INIT,
-//     DISPLAY_TUNER,
-//     DISPLAY_TUNER_MEME,
-//     DISPLAY_METRO
-// };
-
+/* TYPES */
 enum display_note_t {
     NOTE_C,
     NOTE_C_SHARP,
@@ -95,13 +88,14 @@ typedef struct display_tuner_t {
 #define BAR_MARKER_LEN     4
 
 // #define CIRCULAR_TUNER
-//  #define TRIANGLE_TUNER
+// #define TRIANGLE_TUNER
 #define BAR_TUNER
 
-#define USD2CAD(a)  ((1.35 * (a) * 0.01))
-#define USD2GBP(a)  ((0.8 * (a) * 0.01))
+/* MACROS */
+#define USD2CAD(a) ((1.35 * (a)*0.01))
+#define USD2GBP(a) ((0.8 * (a)*0.01))
 #define USD2YEN(a) ((1.34 * (a)))
-#define USD2BTC(a)  (((a)*rand()) % 10000)
+#define USD2BTC(a) (((a)*rand()) % 10000)
 
 /* EXPORTED FUNCTIONS */
 void display_init();
